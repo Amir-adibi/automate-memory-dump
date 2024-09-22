@@ -2,6 +2,7 @@ import sys
 import os
 import subprocess
 import shutil
+import time
 
 # Automate Operations on a single VM
 class VM:
@@ -14,10 +15,12 @@ class VM:
     }
 
     initial_snapshot_name: str
+    base_vmem_file: str = None
 
-    def __init__(self, vmrun_path: str, vmx_path: str):
-        self.vmrun = vmrun_path
-        self.vmx = vmx_path
+    def __init__(self, vmrun_path: str, vmx_path: str, vm_dir: str):
+        self.vmrun = self.trim_paths(vmrun_path)
+        self.vmx = self.trim_paths(vmx_path)
+        self.vm_dir = vm_dir
 
     def start_vm(self):
         cmd = self.vmrun + self.operation_map['start'] + self.vmx
@@ -34,25 +37,35 @@ class VM:
         This function takes a snapshot of the running VM and copies the memory dump (.vmem) file
         to the specified destination directory.
         """
+        if self.base_vmem_file is None:
+            for file in os.listdir(self.vm_dir):
+                if file.endswith('.vmem'):
+                    self.base_vmem_file = file
+
         # Take the snapshot
         snapshot_cmd = self.vmrun + self.operation_map['createSnap'] + self.vmx + f' "{snapshot_name}"'
         print(f"Taking snapshot: {snapshot_cmd}")
         subprocess.run(snapshot_cmd, shell=True)
 
         # Assuming the .vmem file is in the same directory as the VMX file
-        vm_dir = os.path.dirname(self.vmx.replace('"', ''))  # Remove quotes to get the actual path
-        memory_file = os.path.join(vm_dir,
-                                   f'{os.path.splitext(os.path.basename(self.vmx))[0]}-Snapshot{snapshot_name}.vmem')
+        vm_dir = os.path.dirname(self.vm_dir.replace('"', ''))  # Remove quotes to get the actual path
 
-        # Ensure the memory dump exists
-        if not os.path.exists(memory_file):
-            print(f"Error: Memory dump file {memory_file} not found!")
+        # Find the .vmem file (assuming it's the most recent .vmem file)
+        vmem_file = None
+        for file in os.listdir(vm_dir):
+            if file.endswith('.vmem') and file != self.base_vmem_file:
+                vmem_file = os.path.join(vm_dir, file)
+                break
+
+        # If we couldn't find the .vmem file, print an error and exit
+        if not vmem_file or not os.path.exists(vmem_file):
+            print(f"Error: Memory dump file for snapshot {snapshot_name} not found!")
             sys.exit(1)
 
         # Copy the memory dump to the destination
         dest_file = os.path.join(destination_path, f'{snapshot_name}.vmem')
-        print(f"Copying memory dump from {memory_file} to {dest_file}")
-        shutil.copy(memory_file, dest_file)
+        print(f"Copying memory dump from {vmem_file} to {dest_file}")
+        shutil.copy(vmem_file, dest_file)
         print("Memory dump copied successfully.")
 
     def capture_initial_snapshot(self, snapshot_name, destination_path):
@@ -60,25 +73,35 @@ class VM:
         This function takes a snapshot of the running VM and copies the memory dump (.vmem) file
         to the specified destination directory.
         """
+        if self.base_vmem_file is None:
+            for file in os.listdir(self.vm_dir):
+                if file.endswith('.vmem'):
+                    self.base_vmem_file = file
+
         # Take the snapshot
         snapshot_cmd = self.vmrun + self.operation_map['createSnap'] + self.vmx + f' "{snapshot_name}"'
         print(f"Taking snapshot: {snapshot_cmd}")
         subprocess.run(snapshot_cmd, shell=True)
 
         # Assuming the .vmem file is in the same directory as the VMX file
-        vm_dir = os.path.dirname(self.vmx.replace('"', ''))  # Remove quotes to get the actual path
-        memory_file = os.path.join(vm_dir,
-                                   f'{os.path.splitext(os.path.basename(self.vmx))[0]}-Snapshot{snapshot_name}.vmem')
+        vm_dir = os.path.dirname(self.vm_dir.replace('"', ''))  # Remove quotes to get the actual path
 
-        # Ensure the memory dump exists
-        if not os.path.exists(memory_file):
-            print(f"Error: Memory dump file {memory_file} not found!")
+        # Find the .vmem file (assuming it's the most recent .vmem file)
+        vmem_file = None
+        for file in os.listdir(vm_dir):
+            if file.endswith('.vmem') and file != self.base_vmem_file:
+                vmem_file = os.path.join(vm_dir, file)
+                break
+
+        # If we couldn't find the .vmem file, print an error and exit
+        if not vmem_file or not os.path.exists(vmem_file):
+            print(f"Error: Memory dump file for snapshot {snapshot_name} not found!")
             sys.exit(1)
 
         # Copy the memory dump to the destination
         dest_file = os.path.join(destination_path, f'{snapshot_name}.vmem')
-        print(f"Copying memory dump from {memory_file} to {dest_file}")
-        shutil.copy(memory_file, dest_file)
+        print(f"Copying memory dump from {vmem_file} to {dest_file}")
+        shutil.copy(vmem_file, dest_file)
         self.initial_snapshot_name = snapshot_name
         print("Memory dump copied successfully.")
 
@@ -101,3 +124,10 @@ class VM:
         cmd = self.vmrun + self.operation_map[operation] + self.vmx
         print(f"Executing: {cmd}")
         subprocess.run(cmd, shell=True)
+
+    @staticmethod
+    def trim_paths(path: str):
+        if ' ' in path and not path.startswith('"'):
+            return f'"{path}"'
+
+        return path
