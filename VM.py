@@ -119,6 +119,20 @@ class VM:
         print(f"Reverting VM to initial snapshot: {revert_cmd}")
         subprocess.run(revert_cmd, shell=True)
 
+    def run_program_in_guest(self, program, mode):
+        """
+        Run a program inside the guest VM.
+
+        :param program: Path to the program inside the guest VM (e.g., "C:\\path\\to\\program.exe")
+        :param mode: 'interactive' or 'background' (default is 'background')
+        """
+        if mode == 'interactive':
+            cmd = f'{self.vmrun} -T ws runProgramInGuest {self.vmx} -activeWindow -interactive "{program}"'
+        else:
+            cmd = f'{self.vmrun} -T ws runProgramInGuest {self.vmx} "{program}"'
+
+        print(f"Running program in guest: {cmd}")
+        subprocess.run(cmd, shell=True)
 
     def operate_vm(self, operation: str):
         cmd = self.vmrun + self.operation_map[operation] + self.vmx
