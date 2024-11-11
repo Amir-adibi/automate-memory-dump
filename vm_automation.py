@@ -41,7 +41,7 @@ class VMAutomation:
             malware_path = f'"{self.malware_dir_guest}\\{malware_name}"'
             self.vm.deleteFileInGuest(malware_path)
         except Exception as e:
-            print(f"Error deleting malware: {e}")
+            logging.error(f"Error deleting malware: {e}")
 
     def delete_malware(self, malware_name):
         self.revert_to_clean_state()
@@ -97,7 +97,7 @@ class VMAutomation:
         vmem_files = glob.glob(os.path.join(directory, "*.vmem"))
 
         if not vmem_files:
-            print("No vmem files found!")
+            logging.warning("No vmem files found!")
             return None
 
         newest_file = max(vmem_files, key=os.path.getctime)
@@ -113,6 +113,6 @@ class VMAutomation:
 
         try:
             shutil.move(src_path, dst_path)
-            print(f"**** Moved {src_path} to {dst_path}")
+            logging.info(f"**** Moved {src_path} to {dst_path}")
         except Exception as e:
-            print(f"**** Error moving the file: {e}")
+            logging.error(f"**** Error moving the file: {e}")
