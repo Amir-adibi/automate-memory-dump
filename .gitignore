@@ -1,0 +1,10 @@
+/vmrun.pyc
+/build/lib/vmrun.py
+.idea
+__pycache__
+venv
+*.vmem
+images
+snapshots
+vmrun.egg-info
+dist
