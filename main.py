@@ -1,6 +1,6 @@
 import os
 
-from malware_automation import VMAutomation
+from vm_automation import VMAutomation
 from vmrun import Vmrun
 
 
