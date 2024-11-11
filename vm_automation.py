@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import shutil
 import time
@@ -18,18 +19,18 @@ class VMAutomation:
     def run_malware(self, malware_name):
         # Run the malware executable inside the guest OS
         malware_path = f'"{self.malware_dir_guest}\\{malware_name}"'
-        print(f"Running malware in guest: {malware_path}")
+        logging.info(f"Running malware in guest: {malware_path}")
         return self.vm.runProgramInGuest(malware_path, mode="i")  # 'i' = interactive
 
     def capture_snapshot(self, malware_name):
         # Take a snapshot with the malware name and move its associated memory dump
         snapshot_name = f"{malware_name}"
-        print(f"Taking snapshot: {snapshot_name}")
+        logging.info(f"Taking snapshot: {snapshot_name}")
         self.vm.snapshot(snapshot_name)
 
     def revert_to_clean_state(self):
         # Revert the virtual machine back to the clean snapshot state
-        print(f"Reverting to clean state: {self.clean_snapshot_name}")
+        logging.info(f"Reverting to clean state: {self.clean_snapshot_name}")
         self.vm.revertToSnapshot(self.clean_snapshot_name)
 
     def start(self):
@@ -45,7 +46,8 @@ class VMAutomation:
     def delete_malware(self, malware_name):
         self.revert_to_clean_state()
         self.start()
-        time.sleep(7)
+        logging.info("Reverted to clean state - waiting for 20 seconds")
+        time.sleep(20)
         self.delete_file_in_guest(malware_name)
         self.delete_snapshot("clean_state")
         self.capture_snapshot("clean_state")
@@ -54,7 +56,7 @@ class VMAutomation:
         try:
             self.vm.deleteSnapshot(snapshot_name)
         except Exception as e:
-            print(f"Error deleting snapshot: {e}")
+            logging.error(f"Error deleting snapshot: {e}")
 
     def automate(self):
         # Get a list of malware files inside the guest OS directory
@@ -68,13 +70,13 @@ class VMAutomation:
             # Run the malware
             cmd_result = self.run_malware(malware_name)
             cmd_output = ''.join([line for line in cmd_result])
-            print("CMD_RESULT: ", cmd_output)
+            logging.info("CMD_RESULT: ", cmd_output)
             if 'could not run on the guest' in cmd_output:
                 self.delete_malware(malware_name)
                 continue
 
             # Wait for 120 seconds for the malware to execute
-            print(f"Waiting 120 seconds for malware: {malware_name}")
+            logging.info(f"Waiting 120 seconds for malware: {malware_name}")
             time.sleep(120)
 
             # Capture the snapshot after running the malware
@@ -86,9 +88,9 @@ class VMAutomation:
             # Revert back to the clean snapshot state
             self.revert_to_clean_state()
             self.start()
-            time.sleep(7)
+            time.sleep(20)
 
-            print(f"Malware {malware_name} execution completed.\n")
+            logging.info(f"Malware {malware_name} execution completed.\n")
 
     @staticmethod
     def get_newest_vmem_file(directory):
